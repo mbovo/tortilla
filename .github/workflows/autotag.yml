@@ -1,0 +1,25 @@
+name: autotag
+
+on:
+  # allows to manually run the workflow from the UI
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'DryRun'
+        required: true
+        default: 'false'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Bump container version and create new github tag
+      id: bump_version
+      uses: mathieudutour/github-tag-action@v6.1
+      with:
+        github_token:  ${{ secrets.GITHUB_TOKEN }}
+        fetch_all_tags: true
+        default_bump: patch
+        tag_prefix: v
+        release_branches: main
