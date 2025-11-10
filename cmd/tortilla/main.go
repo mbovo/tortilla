@@ -20,8 +20,9 @@ import (
 	"os"
 	"strings"
 
+	v1 "github.com/mbovo/tortilla/v1"
 	"github.com/rs/zerolog"
-	"github.com/spf13/viper"
+	"go.yaml.in/yaml/v4"
 )
 
 const (
@@ -59,7 +60,10 @@ func init() {
 }
 
 func initLogger() {
-	logLevelStr := viper.GetString("logLevel")
+
+	cfg, _ := ctx.Value("config").(v1.TortillaConfig)
+
+	logLevelStr := cfg.LogLevel
 	level, err := zerolog.ParseLevel(strings.ToLower(logLevelStr))
 	if err != nil {
 		level = zerolog.InfoLevel
@@ -68,20 +72,16 @@ func initLogger() {
 }
 
 func initConfig() {
-	viper.SetEnvPrefix("tortilla")
-	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
-	viper.AutomaticEnv()
-
-	configFileOverride := viper.GetString("config")
-	viper.SetConfigType("yaml")
-	if configFileOverride != "" {
-		viper.SetConfigFile(configFileOverride)
-	} else {
-		viper.SetConfigName(configFileName)
-		viper.AddConfigPath(".")
-		viper.AddConfigPath("./tortilla")
+	data, err := os.ReadFile(configFileName)
+	if err != nil {
+		zerolog.Ctx(ctx).Warn().Err(err).Msgf("could not open config file %s, using defaults", configFileName)
+		return
 	}
-	viper.ReadInConfig()
+
+	cfg := v1.TortillaConfig{}
+	yaml.Unmarshal(data, &cfg)
+
+	ctx = context.WithValue(ctx, "config", cfg)
 }
 
 func main() {

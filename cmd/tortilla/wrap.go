@@ -18,15 +18,17 @@ import (
 	"context"
 
 	. "github.com/mbovo/tortilla/v1"
+	v1 "github.com/mbovo/tortilla/v1"
 	"github.com/rs/zerolog"
-	"github.com/spf13/viper"
 )
 
 func wrap(ctx context.Context, args []string) (e error) {
 
-	zerolog.Ctx(ctx).Debug().Any("config", viper.GetViper().AllSettings()).Send()
+	cfg, _ := ctx.Value("config").(v1.TortillaConfig)
 
-	tortilla := NewTortilla(ctx, viper.GetViper(), args)
+	zerolog.Ctx(ctx).Debug().Any("config", cfg).Send()
+
+	tortilla := NewTortilla(ctx, cfg, args)
 
 	e = tortilla.Prepare()
 	if e != nil {

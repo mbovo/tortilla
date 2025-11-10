@@ -1,4 +1,8 @@
-logLevel: info
-paths: 
-  - /secret/data/creds
-
+logLevel: trace
+secrets: 
+  - path: /secret/data/creds
+    envName: DB_PASSWORD
+  - path: /secret/data/api
+    envName: DB_API_KEY
+  - path: /secret/data/other/*
+    envPrefix: DADO_
