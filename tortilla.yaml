@@ -1,4 +1,4 @@
-logLevel: trace
+logLevel: error
 secrets: 
   - path: /secret/data/creds
     envName: DB_PASSWORD
