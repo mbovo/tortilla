@@ -22,16 +22,21 @@ Tortilla is configured via a `tortilla.yaml` file. Below is an example configura
 logLevel: info
 secrets:
   - path: /secret/data/creds
-    envName: PASSWORD
-    envPrefix: DB_
+transformations:
+  - type: replace
+    match: "CREDS_SECRETNAME"
+    change: "DB_PASSWORD"
 ```
 
 In this configuration:
 - `logLevel` sets the logging level for Tortilla.
 - `secrets` is a list of secrets to fetch from Vault. Each secret can specify:
   - `path`: The path in Vault where the secret is stored.
-  - `envName`: The name of the environment variable to set with the secret's value (or auto-generated if not specified).
-  - `envPrefix`: A prefix to add to the environment variable name.
+- `transformations` is a list of transformations to apply to the Vault Agent configuration. Each transformation can specify:
+  - `type`: The type of transformation (e.g., `replace`, `prefix`).
+  - `match`: The string to match for replacement.
+  - `change`: The string to replace the matched string with.
+  - `path`: Optionally the path to apply the prefix transformation to
 Make sure to adjust the configuration according to your Vault setup and the secrets you want to manage.
 
 ## Example

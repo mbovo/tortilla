@@ -120,12 +120,12 @@ func (t *Tortilla) Cook() (err error) {
 	err = executor(t.ctx, args[0], args[1:])
 
 	// re-read the config and modify fields
-	cfg := &vaultFacade.GeneratedConfig{}
+	vaultAgentConfig := &vaultFacade.GeneratedConfig{}
 	parser := hclparse.NewParser()
 
 	// e := hclsimple.DecodeFile(t.vaultConfigFile, nil, cfg)
 	inFile, _ := parser.ParseHCLFile(t.vaultConfigFile)
-	diag := gohcl.DecodeBody(inFile.Body, nil, cfg)
+	diag := gohcl.DecodeBody(inFile.Body, nil, vaultAgentConfig)
 	if diag.HasErrors() {
 		t.logger.Error().Str("Errors", diag.Error()).Send()
 		for _, d := range diag {
@@ -134,37 +134,20 @@ func (t *Tortilla) Cook() (err error) {
 		return fmt.Errorf("error reading hcl config file")
 	}
 
-	t.logger.Trace().Msg("Modifying Vault Agent config with environment variable mappings")
-	for k, template := range cfg.EnvTemplates {
-		t.logger.Trace().Str("templateName", template.Name).Msg("Checking template")
-		for _, s := range t.config.Secrets {
-
-			if s.EnvName == "" && s.EnvPrefix == "" {
-				continue
-			}
-
-			t.logger.Trace().Str("secretPath", s.Path[1:]).Msg("Checking secret path")
-			if strings.Contains(template.Contents, strings.ReplaceAll(s.Path[1:], "*", "")) {
-				if s.EnvName != "" {
-					t.logger.Trace().Str("secretPath", s.Path[1:]).Msg("Substituting env name")
-					cfg.EnvTemplates[k].Name = s.EnvName
-				}
-				if s.EnvPrefix != "" {
-					t.logger.Trace().Str("secretPath", s.Path[1:]).Msg("Adding env prefix")
-					cfg.EnvTemplates[k].Name = s.EnvPrefix + cfg.EnvTemplates[k].Name
-				}
-			}
-		}
+	t.logger.Trace().Msg("Apply transformations on Vault Agent config")
+	_, err = NewSimpleTransformer(t.config.Transformations).Apply(t.ctx, vaultAgentConfig)
+	if err != nil {
+		t.logger.Error().Err(err).Msg("Error applying transformations")
+		return
 	}
-
-	t.logger.Info().Interface("cfg", cfg).Send()
+	t.logger.Info().Interface("vaultGentConfig", vaultAgentConfig).Msg("Post transformation ")
 
 	f, err = os.Create(t.vaultConfigFile)
 	if err != nil {
 		return
 	}
 	hclFile := hclwrite.NewEmptyFile()
-	gohcl.EncodeIntoBody(cfg, hclFile.Body())
+	gohcl.EncodeIntoBody(vaultAgentConfig, hclFile.Body())
 	_, err = hclFile.WriteTo(f) // f opened above as temp file
 
 	return
